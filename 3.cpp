@@ -61,7 +61,7 @@ int calculateSimilarity(const string& genome1, const string& genome2, bool debug
 }
 
 int main() {
-    cout << "Задание 3: Степень близости геномов" << endl;
+    cout << "Степень близости геномов" << endl;
     
     string genome1, genome2;
     

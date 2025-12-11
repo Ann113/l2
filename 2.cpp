@@ -6,11 +6,9 @@
 
 using namespace std;
 
-class SimpleSet {
-private:
+struct SimpleSet {
     unordered_set<string> elements;
-    
-public:
+
     void SETADD(const string& element) {
         if (element.empty()) {
             cerr << "Ошибка: Попытка добавить пустой элемент" << endl;

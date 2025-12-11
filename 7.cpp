@@ -5,7 +5,7 @@
 
 using namespace std;
 
-// Узел двусвязного списка
+// Узел д списка
 struct Node {
     int key;
     int value;
@@ -18,9 +18,9 @@ struct Node {
 // LRU кэш
 struct LRUCache {
     int capacity;
-    unordered_map<int, Node*> cache; // Хэш-таблица для быстрого доступа
-    Node* head; // Фиктивная голова
-    Node* tail; // Фиктивный хвост
+    unordered_map<int, Node*> cache;
+    Node* head;
+    Node* tail;
     
     LRUCache(int cap) {
         capacity = cap;

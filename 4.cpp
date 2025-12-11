@@ -22,7 +22,7 @@ bool containsOnlyLetters(const string& word) {
 }
 
 int main() {
-    cout << "Задание 4: Проверка ударений" << endl;
+    cout << "Проверка ударений" << endl;
     
     int n;
     cout << "Введите количество слов в словаре: ";
