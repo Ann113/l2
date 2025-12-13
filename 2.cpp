@@ -1,20 +1,27 @@
 #include <iostream>
 #include <string>
-#include <unordered_set>
 #include <fstream>
-#include <filesystem>
+#include "structures_from_lr1.h"
 
 using namespace std;
 
 struct SimpleSet {
-    unordered_set<string> elements;
+    SetArray* elements;
+
+    SimpleSet() {
+        elements = createSet(10);
+    }
+    
+    ~SimpleSet() {
+        destroySet(elements);
+    }
 
     void SETADD(const string& element) {
         if (element.empty()) {
             cerr << "Ошибка: Попытка добавить пустой элемент" << endl;
             return;
         }
-        elements.insert(element);
+        setInsert(elements, element);
     }
     
     void SETDEL(const string& element) {
@@ -22,7 +29,7 @@ struct SimpleSet {
             cerr << "Ошибка: Попытка удалить пустой элемент" << endl;
             return;
         }
-        elements.erase(element);
+        setRemove(elements, element);
     }
     
     bool SET_AT(const string& element) {
@@ -30,7 +37,7 @@ struct SimpleSet {
             cerr << "Ошибка: Попытка проверить пустой элемент" << endl;
             return false;
         }
-        return elements.find(element) != elements.end();
+        return setContains(elements, element);
     }
     
     bool loadFromFile(const string& filename) {
@@ -40,12 +47,15 @@ struct SimpleSet {
             return false;
         }
         
-        elements.clear();
+        // Очищаем текущее множество
+        destroySet(elements);
+        elements = createSet(10);
+        
         string element;
         int count = 0;
         while (file >> element) {
             if (!element.empty()) {
-                elements.insert(element);
+                setInsert(elements, element);
                 count++;
             }
         }
@@ -55,32 +65,24 @@ struct SimpleSet {
     }
     
     bool saveToFile(const string& filename) {
-        string temp_filename = filename + ".tmp";
-        ofstream file(temp_filename);
+        ofstream file(filename);
         
         if (!file.is_open()) {
-            cerr << "Ошибка: Не удалось открыть файл " << temp_filename << " для записи" << endl;
+            cerr << "Ошибка: Не удалось открыть файл " << filename << " для записи" << endl;
             return false;
         }
         
-        for (const auto& element : elements) {
-            file << element << endl;
+        for (int i = 0; i < elements->size; i++) {
+            file << elements->data[i] << endl;
         }
         
         file.close();
-        
-        try {
-            filesystem::rename(temp_filename, filename);
-            cout << "Сохранено " << elements.size() << " элементов в файл " << filename << endl;
-            return true;
-        } catch (const filesystem::filesystem_error& e) {
-            cerr << "Ошибка при сохранении файла: " << e.what() << endl;
-            return false;
-        }
+        cout << "Сохранено " << elements->size << " элементов в файл " << filename << endl;
+        return true;
     }
     
     size_t size() const {
-        return elements.size();
+        return elements->size;
     }
 };
 
@@ -133,7 +135,12 @@ int main(int argc, char* argv[]) {
     
     SimpleSet set;
     
-    if (!filesystem::exists(filename)) {
+    // Проверка существования файла
+    ifstream testFile(filename);
+    bool fileExists = testFile.good();
+    testFile.close();
+    
+    if (!fileExists) {
         cout << "Файл " << filename << " не существует. Будет создан новый." << endl;
     } else {
         if (!set.loadFromFile(filename)) {

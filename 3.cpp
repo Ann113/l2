@@ -1,10 +1,33 @@
 #include <iostream>
-#include <unordered_set>
 #include <string>
 #include <cctype>
-#include <vector>
+#include "structures_from_lr1.h"
 
 using namespace std;
+
+// Специальное множество для пар (2 символа)
+struct PairSet {
+    SetArray* pairs;
+    
+    PairSet() {
+        pairs = createSet(100); // Начальная емкость 100
+    }
+    
+    ~PairSet() {
+        destroySet(pairs);
+    }
+    
+    void insert(const string& pair) {
+        if (pair.length() == 2) {
+            setInsert(pairs, pair);
+        }
+    }
+    
+    bool contains(const string& pair) {
+        if (pair.length() != 2) return false;
+        return setContains(pairs, pair);
+    }
+};
 
 // Функция для проверки корректности генома
 bool isValidGenome(const string& genome) {
@@ -24,14 +47,14 @@ bool isValidGenome(const string& genome) {
     return true;
 }
 
-// Функция для вычисления степени близости с детальной отладкой
-int calculateSimilarity(const string& genome1, const string& genome2, bool debug = false) {
+// Функция для вычисления степени близости
+int calculateSimilarity(const string& genome1, const string& genome2) {
     if (genome1.length() < 2 || genome2.length() < 2) {
         return 0;
     }
 
     // Создаем множество всех пар второго генома
-    unordered_set<string> pairs_genome2;
+    PairSet pairs_genome2;
     for (size_t i = 0; i + 1 < genome2.length(); i++) {
         string pair = genome2.substr(i, 2);
         pairs_genome2.insert(pair);
@@ -39,22 +62,12 @@ int calculateSimilarity(const string& genome1, const string& genome2, bool debug
 
     // Подсчитываем совпадающие пары первого генома
     int similarity = 0;
-    vector<string> found_pairs;
     
     for (size_t i = 0; i + 1 < genome1.length(); i++) {
         string pair = genome1.substr(i, 2);
-        if (pairs_genome2.count(pair)) {
+        if (pairs_genome2.contains(pair)) {
             similarity++;
-            found_pairs.push_back(pair);
         }
-    }
-
-    if (debug) {
-        cout << "Совпадающие пары: ";
-        for (const auto& pair : found_pairs) {
-            cout << pair << " ";
-        }
-        cout << endl;
     }
 
     return similarity;
@@ -94,7 +107,8 @@ int main() {
     }
     
     // Вычисление и вывод результата
-    int similarity = calculateSimilarity(genome1, genome2, true);
+    int similarity = calculateSimilarity(genome1, genome2);
     cout << "Степень близости: " << similarity << endl;
+    
     return 0;
 }

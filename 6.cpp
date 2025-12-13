@@ -1,8 +1,7 @@
 #include <iostream>
-#include <vector>
-#include <list>
 #include <chrono>
 #include <string>
+#include "structures_from_lr1.h"  // Наши структуры
 
 using namespace std;
 
@@ -16,9 +15,9 @@ struct HashItem {
     HashItem(int k, const string& v) : key(k), value(v), isDeleted(false) {}
 };
 
-// Хеш-таблица с открытой адресацией
+// Хеш-таблица с открытой адресацией (используем SetArray как динамический массив)
 struct OpenAddressingHashTable {
-    vector<HashItem> table;
+    SetArray* table;  // Используем нашу структуру вместо std::vector
     int capacity;
     int size;
     double loadFactorThreshold;
@@ -26,7 +25,15 @@ struct OpenAddressingHashTable {
 
     OpenAddressingHashTable(int initialCapacity = 8, double threshold = 0.9) 
         : capacity(initialCapacity), size(0), loadFactorThreshold(threshold), rehashCount(0) {
-        table.resize(capacity);
+        table = createSet(initialCapacity);
+        // Инициализируем массив пустыми элементами
+        for (int i = 0; i < capacity; i++) {
+            table->data[i] = "";  // Пустая строка как маркер пустой ячейки
+        }
+    }
+    
+    ~OpenAddressingHashTable() {
+        destroySet(table);
     }
 
     // Основная хеш-функция
@@ -50,17 +57,28 @@ struct OpenAddressingHashTable {
         int i = 0;
 
         while (i < capacity) {
-            if (table[index].key == -1 || table[index].isDeleted) {
-                table[index] = HashItem(key, value);
+            // Проверяем пустую ячейку (ключ -1 или удалена)
+            string cellValue = table->data[index];
+            if (cellValue.empty() || cellValue == "DELETED") {
+                // Сохраняем в формате "ключ:значение"
+                table->data[index] = to_string(key) + ":" + value;
                 size++;
                 cout << "Ключ " << key << " вставлен в позицию " << index << endl;
                 return;
             }
-            if (table[index].key == key) {
-                table[index].value = value;
-                cout << "Ключ " << key << " обновлен в позиции " << index << endl;
-                return;
+            
+            // Извлекаем ключ из строки
+            size_t colonPos = cellValue.find(':');
+            if (colonPos != string::npos) {
+                int existingKey = stoi(cellValue.substr(0, colonPos));
+                if (existingKey == key) {
+                    // Обновляем значение
+                    table->data[index] = to_string(key) + ":" + value;
+                    cout << "Ключ " << key << " обновлен в позиции " << index << endl;
+                    return;
+                }
             }
+            
             index = (index + step) % capacity;
             i++;
         }
@@ -75,10 +93,23 @@ struct OpenAddressingHashTable {
         int step = hash2(key);
         int i = 0;
 
-        while (i < capacity && table[index].key != -1) {
-            if (!table[index].isDeleted && table[index].key == key) {
-                return table[index].value;
+        while (i < capacity) {
+            string cellValue = table->data[index];
+            
+            if (cellValue.empty()) {
+                return "Not Found";
             }
+            
+            if (cellValue != "DELETED") {
+                size_t colonPos = cellValue.find(':');
+                if (colonPos != string::npos) {
+                    int existingKey = stoi(cellValue.substr(0, colonPos));
+                    if (existingKey == key) {
+                        return cellValue.substr(colonPos + 1);
+                    }
+                }
+            }
+            
             index = (index + step) % capacity;
             i++;
         }
@@ -91,13 +122,27 @@ struct OpenAddressingHashTable {
         int step = hash2(key);
         int i = 0;
 
-        while (i < capacity && table[index].key != -1) {
-            if (!table[index].isDeleted && table[index].key == key) {
-                table[index].isDeleted = true;
-                size--;
-                cout << "Ключ " << key << " удален из позиции " << index << endl;
+        while (i < capacity) {
+            string cellValue = table->data[index];
+            
+            if (cellValue.empty()) {
+                cout << "Ключ " << key << " не найден для удаления" << endl;
                 return;
             }
+            
+            if (cellValue != "DELETED") {
+                size_t colonPos = cellValue.find(':');
+                if (colonPos != string::npos) {
+                    int existingKey = stoi(cellValue.substr(0, colonPos));
+                    if (existingKey == key) {
+                        table->data[index] = "DELETED";
+                        size--;
+                        cout << "Ключ " << key << " удален из позиции " << index << endl;
+                        return;
+                    }
+                }
+            }
+            
             index = (index + step) % capacity;
             i++;
         }
@@ -112,23 +157,38 @@ struct OpenAddressingHashTable {
     // Реструктуризация таблицы
     void rehash() {
         rehashCount++;
-        cout << "\n Реструктуризация таблицы с открытой адресацией" << endl;
+        cout << "\nРеструктуризация таблицы с открытой адресацией" << endl;
         cout << "Старая емкость: " << capacity << " -> Новая емкость: " << capacity * 2 << endl;
         cout << "Коэффициент загрузки: " << getLoadFactor() << endl;
 
-        vector<HashItem> oldTable = table;
+        // Сохраняем старые данные
+        SetArray* oldTable = table;
         int oldCapacity = capacity;
         
+        // Создаем новую таблицу
         capacity *= 2;
-        table.clear();
-        table.resize(capacity);
+        table = createSet(capacity);
         size = 0;
+        
+        // Инициализируем новую таблицу
+        for (int i = 0; i < capacity; i++) {
+            table->data[i] = "";
+        }
 
+        // Переносим данные из старой таблицы
         for (int i = 0; i < oldCapacity; i++) {
-            if (oldTable[i].key != -1 && !oldTable[i].isDeleted) {
-                insert(oldTable[i].key, oldTable[i].value);
+            string cellValue = oldTable->data[i];
+            if (!cellValue.empty() && cellValue != "DELETED") {
+                size_t colonPos = cellValue.find(':');
+                if (colonPos != string::npos) {
+                    int key = stoi(cellValue.substr(0, colonPos));
+                    string value = cellValue.substr(colonPos + 1);
+                    insert(key, value);
+                }
             }
         }
+        
+        destroySet(oldTable);
         cout << "Реструктуризация завершена!" << endl;
     }
 
@@ -137,10 +197,14 @@ struct OpenAddressingHashTable {
         cout << "\nСодержимое таблицы (Открытая адресация)" << endl;
         bool isEmpty = true;
         for (int i = 0; i < capacity; i++) {
-            if (table[i].key != -1 && !table[i].isDeleted) {
-                cout << "  Индекс " << i << ": ключ=" << table[i].key 
-                     << ", значение='" << table[i].value << "'" << endl;
-                isEmpty = false;
+            string cellValue = table->data[i];
+            if (!cellValue.empty() && cellValue != "DELETED") {
+                size_t colonPos = cellValue.find(':');
+                if (colonPos != string::npos) {
+                    cout << "  Индекс " << i << ": ключ=" << cellValue.substr(0, colonPos) 
+                         << ", значение='" << cellValue.substr(colonPos + 1) << "'" << endl;
+                    isEmpty = false;
+                }
             }
         }
         if (isEmpty) {
@@ -152,7 +216,7 @@ struct OpenAddressingHashTable {
     void printStats() {
         int deletedCount = 0;
         for (int i = 0; i < capacity; i++) {
-            if (table[i].isDeleted) deletedCount++;
+            if (table->data[i] == "DELETED") deletedCount++;
         }
         
         cout << "\nСтатистика открытой адресации" << endl;
@@ -164,9 +228,18 @@ struct OpenAddressingHashTable {
     }
 };
 
-// Хеш-таблица с методом цепочек
+// Узел для цепочек
+struct ChainNode {
+    int key;
+    string value;
+    ChainNode* next;
+    
+    ChainNode(int k, const string& v) : key(k), value(v), next(nullptr) {}
+};
+
+// Хеш-таблица с методом цепочек (используем наш список)
 struct ChainingHashTable {
-    vector<list<pair<int, string>>> table;
+    ChainNode** table;  // Массив указателей на списки
     int capacity;
     int size;
     double loadFactorThreshold;
@@ -174,7 +247,22 @@ struct ChainingHashTable {
 
     ChainingHashTable(int initialCapacity = 8, double threshold = 0.9) 
         : capacity(initialCapacity), size(0), loadFactorThreshold(threshold), rehashCount(0) {
-        table.resize(capacity);
+        table = new ChainNode*[capacity];
+        for (int i = 0; i < capacity; i++) {
+            table[i] = nullptr;
+        }
+    }
+    
+    ~ChainingHashTable() {
+        for (int i = 0; i < capacity; i++) {
+            ChainNode* current = table[i];
+            while (current != nullptr) {
+                ChainNode* next = current->next;
+                delete current;
+                current = next;
+            }
+        }
+        delete[] table;
     }
 
     // Хеш-функция
@@ -189,14 +277,22 @@ struct ChainingHashTable {
         }
 
         int index = hash(key);
-        for (auto& item : table[index]) {
-            if (item.first == key) {
-                item.second = value;
+        
+        // Проверяем, существует ли уже ключ
+        ChainNode* current = table[index];
+        while (current != nullptr) {
+            if (current->key == key) {
+                current->value = value;
                 cout << "Ключ " << key << " обновлен в корзине " << index << endl;
                 return;
             }
+            current = current->next;
         }
-        table[index].push_back(make_pair(key, value));
+        
+        // Добавляем новый узел в начало списка
+        ChainNode* newNode = new ChainNode(key, value);
+        newNode->next = table[index];
+        table[index] = newNode;
         size++;
         cout << "Ключ " << key << " вставлен в корзину " << index << endl;
     }
@@ -204,10 +300,13 @@ struct ChainingHashTable {
     // Поиск элемента
     string search(int key) {
         int index = hash(key);
-        for (const auto& item : table[index]) {
-            if (item.first == key) {
-                return item.second;
+        ChainNode* current = table[index];
+        
+        while (current != nullptr) {
+            if (current->key == key) {
+                return current->value;
             }
+            current = current->next;
         }
         return "Not Found";
     }
@@ -215,13 +314,24 @@ struct ChainingHashTable {
     // Удаление элемента
     void remove(int key) {
         int index = hash(key);
-        for (auto it = table[index].begin(); it != table[index].end(); ++it) {
-            if (it->first == key) {
-                table[index].erase(it);
+        ChainNode* current = table[index];
+        ChainNode* prev = nullptr;
+        
+        while (current != nullptr) {
+            if (current->key == key) {
+                if (prev == nullptr) {
+                    // Удаляем первый элемент
+                    table[index] = current->next;
+                } else {
+                    prev->next = current->next;
+                }
+                delete current;
                 size--;
                 cout << "Ключ " << key << " удален из корзины " << index << endl;
                 return;
             }
+            prev = current;
+            current = current->next;
         }
         cout << "Ключ " << key << " не найден для удаления" << endl;
     }
@@ -238,21 +348,34 @@ struct ChainingHashTable {
         cout << "Старая емкость: " << capacity << " -> Новая емкость: " << capacity * 2 << endl;
         cout << "Коэффициент загрузки: " << getLoadFactor() << endl;
 
-        vector<list<pair<int, string>>> oldTable = table;
+        // Сохраняем старую таблицу
+        ChainNode** oldTable = table;
         int oldCapacity = capacity;
         
+        // Создаем новую таблицу
         capacity *= 2;
-        table.clear();
-        table.resize(capacity);
+        table = new ChainNode*[capacity];
+        for (int i = 0; i < capacity; i++) {
+            table[i] = nullptr;
+        }
         size = 0;
 
+        // Переносим элементы из старой таблицы
         for (int i = 0; i < oldCapacity; i++) {
-            for (const auto& item : oldTable[i]) {
-                int newIndex = hash(item.first);
-                table[newIndex].push_back(item);
+            ChainNode* current = oldTable[i];
+            while (current != nullptr) {
+                ChainNode* next = current->next;
+                // Вставляем в новую таблицу
+                int newIndex = hash(current->key);
+                current->next = table[newIndex];
+                table[newIndex] = current;
                 size++;
+                
+                current = next;
             }
         }
+        
+        delete[] oldTable;
         cout << "Реструктуризация завершена!" << endl;
     }
 
@@ -261,12 +384,16 @@ struct ChainingHashTable {
         cout << "\nСодержимое таблицы (Метод цепочек)" << endl;
         bool isEmpty = true;
         for (int i = 0; i < capacity; i++) {
-            if (!table[i].empty()) {
-                cout << "  Корзина " << i << " (" << table[i].size() << " элементов): ";
-                for (const auto& item : table[i]) {
-                    cout << "[" << item.first << ":'" << item.second << "] ";
+            if (table[i] != nullptr) {
+                cout << "  Корзина " << i << ": ";
+                ChainNode* current = table[i];
+                int count = 0;
+                while (current != nullptr) {
+                    cout << "[" << current->key << ":'" << current->value << "] ";
+                    current = current->next;
+                    count++;
                 }
-                cout << endl;
+                cout << "(" << count << " элементов)" << endl;
                 isEmpty = false;
             }
         }
@@ -277,7 +404,7 @@ struct ChainingHashTable {
 
     // Вывод статистики
     void printStats() {
-        cout << "\nСтатистика метода цепочек " << endl;
+        cout << "\nСтатистика метода цепочек" << endl;
         cout << "Размер: " << size << endl;
         cout << "Емкость: " << capacity << endl;
         cout << "Коэффициент загрузки: " << getLoadFactor() << endl;
@@ -286,11 +413,18 @@ struct ChainingHashTable {
         int maxChain = 0;
         int emptyBuckets = 0;
         for (int i = 0; i < capacity; i++) {
-            if (table[i].empty()) {
+            if (table[i] == nullptr) {
                 emptyBuckets++;
-            }
-            if (table[i].size() > maxChain) {
-                maxChain = table[i].size();
+            } else {
+                int chainLength = 0;
+                ChainNode* current = table[i];
+                while (current != nullptr) {
+                    chainLength++;
+                    current = current->next;
+                }
+                if (chainLength > maxChain) {
+                    maxChain = chainLength;
+                }
             }
         }
         
@@ -372,6 +506,7 @@ void interactiveMode() {
 }
 
 int main() {
+    cout << "Хеш-таблицы с собственными структурами" << endl;
     
     interactiveMode();
     

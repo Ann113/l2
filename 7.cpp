@@ -1,77 +1,32 @@
 #include <iostream>
-#include <unordered_map>
 #include <string>
 #include <vector>
+#include <cstdio>
+#include "structures_from_lr1.h"
 
 using namespace std;
-
-// Узел д списка
-struct Node {
-    int key;
-    int value;
-    Node* prev;
-    Node* next;
-    
-    Node(int k, int v) : key(k), value(v), prev(nullptr), next(nullptr) {}
-};
 
 // LRU кэш
 struct LRUCache {
     int capacity;
-    unordered_map<int, Node*> cache;
-    Node* head;
-    Node* tail;
+    HashTable* cache;
+    List* list;
     
-    LRUCache(int cap) {
-        capacity = cap;
-        head = new Node(-1, -1);
-        tail = new Node(-1, -1);
-        head->next = tail;
-        tail->prev = head;
+    LRUCache(int cap) : capacity(cap) {
+        cache = createHashTable(capacity * 2); // Увеличиваем емкость для уменьшения коллизий
+        list = createList();
     }
     
     ~LRUCache() {
-        Node* current = head;
-        while (current != nullptr) {
-            Node* next = current->next;
-            delete current;
-            current = next;
-        }
-    }
-    
-    // Добавить узел в начало
-    void addToHead(Node* node) {
-        node->next = head->next;
-        node->prev = head;
-        head->next->prev = node;
-        head->next = node;
-    }
-    
-    // Удалить узел из списка
-    void removeNode(Node* node) {
-        node->prev->next = node->next;
-        node->next->prev = node->prev;
-    }
-    
-    // Переместить узел в начало
-    void moveToHead(Node* node) {
-        removeNode(node);
-        addToHead(node);
-    }
-    
-    // Удалить наименее используемый элемент
-    void removeLRU() {
-        Node* lru = tail->prev;
-        removeNode(lru);
-        cache.erase(lru->key);
-        delete lru;
+        destroyHashTable(cache);
+        destroyList(list);
     }
     
     // Получить значение по ключу
     int get(int key) {
-        if (cache.find(key) != cache.end()) {
-            Node* node = cache[key];
-            moveToHead(node);
+        ListNode* node = hashFind(cache, key);
+        if (node != nullptr) {
+            moveToFront(list, node);
             return node->value;
         }
         return -1;
@@ -79,20 +34,44 @@ struct LRUCache {
     
     // Установить значение по ключу
     void set(int key, int value) {
-        if (cache.find(key) != cache.end()) {
+        ListNode* node = hashFind(cache, key);
+        if (node != nullptr) {
             // Ключ существует - обновить и переместить в начало
-            Node* node = cache[key];
             node->value = value;
-            moveToHead(node);
+            moveToFront(list, node);
         } else {
             // Новый ключ
-            if (cache.size() >= capacity) {
-                removeLRU();
+            if (list->size >= capacity) {
+                // Удаляем наименее используемый элемент (с конца списка)
+                ListNode* lruNode = list->tail;
+                if (lruNode != nullptr) {
+                    hashRemove(cache, lruNode->key);
+                    removeNode(list, lruNode);
+                    delete lruNode;
+                }
             }
-            Node* newNode = new Node(key, value);
-            cache[key] = newNode;
-            addToHead(newNode);
+            
+            ListNode* newNode = createListNode(key, value);
+            hashInsert(cache, key, newNode);
+            addToFront(list, newNode);
         }
+    }
+    
+    int getCurrentSize() {
+        return list->size;
+    }
+    
+    void printCache() {
+        cout << "Состояние кэша (" << list->size << "/" << capacity << "): ";
+        ListNode* current = list->head;
+        while (current != nullptr) {
+            cout << current->key << ":" << current->value;
+            if (current->next != nullptr) {
+                cout << " -> ";
+            }
+            current = current->next;
+        }
+        cout << endl;
     }
 };
 
@@ -118,7 +97,7 @@ void processQueries() {
     cin.ignore();
     
     LRUCache cache(cap);
-    vector<int> results; // Результаты GET запросов
+    vector<int> results;
     
     cout << "Введите запросы (SET key value или GET key):" << endl;
     
@@ -131,6 +110,8 @@ void processQueries() {
             int key, value;
             if (sscanf(command.c_str(), "SET %d %d", &key, &value) == 2) {
                 cache.set(key, value);
+                cout << "Установлено: ключ=" << key << ", значение=" << value << endl;
+                cache.printCache();
             } else {
                 cout << "Ошибка: неверный формат команды SET. Используйте: SET key value" << endl;
             }
@@ -139,6 +120,8 @@ void processQueries() {
             if (sscanf(command.c_str(), "GET %d", &key) == 1) {
                 int result = cache.get(key);
                 results.push_back(result);
+                cout << "Получено: ключ=" << key << ", значение=" << result << endl;
+                cache.printCache();
             } else {
                 cout << "Ошибка: неверный формат команды GET. Используйте: GET key" << endl;
             }
@@ -148,15 +131,18 @@ void processQueries() {
     }
     
     // Вывод результатов GET запросов
-    for (size_t i = 0; i < results.size(); i++) {
-        if (i > 0) cout << " ";
-        cout << results[i];
+    if (!results.empty()) {
+        cout << "\nРезультаты GET запросов: ";
+        for (size_t i = 0; i < results.size(); i++) {
+            if (i > 0) cout << " ";
+            cout << results[i];
+        }
+        cout << endl;
     }
-    cout << endl;
 }
 
 int main() {
-    cout << "LRU" << endl;
+    cout << "LRU Кэш" << endl;
     
     try {
         processQueries();

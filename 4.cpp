@@ -1,10 +1,30 @@
 #include <iostream>
-#include <unordered_set>
 #include <string>
 #include <sstream>
 #include <cctype>
+#include "structures_from_lr1.h"
 
 using namespace std;
+
+struct WordDictionary {
+    SetArray* words;
+    
+    WordDictionary() {
+        words = createSet(10);
+    }
+    
+    ~WordDictionary() {
+        destroySet(words);
+    }
+    
+    void addWord(const string& word) {
+        setInsert(words, word);
+    }
+    
+    bool contains(const string& word) {
+        return setContains(words, word);
+    }
+};
 
 int countStresses(const string& word) {
     int count = 0;
@@ -27,7 +47,6 @@ int main() {
     int n;
     cout << "Введите количество слов в словаре: ";
     
-    // Проверка ввода числа
     if (!(cin >> n)) {
         cout << "Ошибка: введите целое число!" << endl;
         return 1;
@@ -38,7 +57,7 @@ int main() {
         return 1;
     }
 
-    unordered_set<string> dict;
+    WordDictionary dict;
     string word;
     cout << "Введите слова словаря:" << endl;
     
@@ -48,13 +67,12 @@ int main() {
             return 1;
         }
         
-        // Проверка, что слово состоит только из букв
         if (!containsOnlyLetters(word)) {
             cout << "Ошибка: слово должно содержать только буквы! Получено: '" << word << "'" << endl;
             return 1;
         }
         
-        dict.insert(word);
+        dict.addWord(word);
     }
 
     cin.ignore();
@@ -78,7 +96,6 @@ int main() {
     while (ss >> word) {
         wordCount++;
         
-        // Проверка, что слово в тексте состоит только из букв
         if (!containsOnlyLetters(word)) {
             cout << "Ошибка: слово в тексте содержит небуквенные символы: '" << word << "'" << endl;
             return 1;
@@ -86,15 +103,15 @@ int main() {
 
         int stresses = countStresses(word);
         
-        if (dict.count(word)) {
+        if (dict.contains(word)) {
             if (stresses != 1) {
                 errors++;
-                cout << "Ошибка в слове " << word << endl;
+                cout << "Ошибка в слове " << word << " (есть в словаре, но ударение неверное)" << endl;
             }
         } else {
             if (stresses != 1) {
                 errors++;
-                cout << "Ошибка в слове " << word << endl;
+                cout << "Ошибка в слове " << word << " (нет в словаре, ударение должно быть одно)" << endl;
             }
         }
     }
