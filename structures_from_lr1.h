@@ -2,10 +2,10 @@
 #define STRUCTURES_FROM_LR1_H
 
 #include <string>
-
-// ========== СТЕК ==========
+using namespace std;
+//стек
 struct StackNode {
-    std::string data;
+    string data;
     StackNode* next;
 };
 
@@ -16,25 +16,25 @@ struct Stack {
 
 Stack* createStack();
 void destroyStack(Stack* stack);
-void push(Stack* stack, const std::string& value);
-std::string pop(Stack* stack);
-std::string peek(Stack* stack);
+void push(Stack* stack, const string& value);
+string pop(Stack* stack);
+string peek(Stack* stack);
 bool isEmptyStack(Stack* stack);
 
-// ========== МНОЖЕСТВО ==========
+//множество
 struct SetArray {
-    std::string* data;
+    string* data;
     int size;
     int capacity;
 };
 
 SetArray* createSet(int initialCapacity);
 void destroySet(SetArray* set);
-void setInsert(SetArray* set, const std::string& value);
-bool setContains(SetArray* set, const std::string& value);
-void setRemove(SetArray* set, const std::string& value);
+void setInsert(SetArray* set, const string& value);
+bool setContains(SetArray* set, const string& value);
+void setRemove(SetArray* set, const string& value);
 
-// ========== СПИСОК для LRU ==========
+//список
 struct ListNode {
     int key;
     int value;
@@ -55,7 +55,7 @@ void addToFront(List* list, ListNode* node);
 void removeNode(List* list, ListNode* node);
 void moveToFront(List* list, ListNode* node);
 
-// ========== ХЕШ-ТАБЛИЦА для LRU ==========
+//хеш
 struct HashEntry {
     int key;
     ListNode* value;

@@ -1,8 +1,9 @@
 #include "structures_from_lr1.h"
 #include <iostream>
 #include <algorithm>
+using namespace std;
 
-// ========== ФУНКЦИИ ДЛЯ СТЕКА ==========
+//стек
 Stack* createStack() {
     Stack* stack = new Stack;
     stack->top = nullptr;
@@ -19,7 +20,7 @@ void destroyStack(Stack* stack) {
     delete stack;
 }
 
-void push(Stack* stack, const std::string& value) {
+void push(Stack* stack, const string& value) {
     StackNode* newNode = new StackNode;
     newNode->data = value;
     newNode->next = stack->top;
@@ -27,19 +28,19 @@ void push(Stack* stack, const std::string& value) {
     stack->size++;
 }
 
-std::string pop(Stack* stack) {
+string pop(Stack* stack) {
     if (stack->top == nullptr) {
         return "";
     }
     StackNode* temp = stack->top;
-    std::string value = temp->data;
+    string value = temp->data;
     stack->top = stack->top->next;
     delete temp;
     stack->size--;
     return value;
 }
 
-std::string peek(Stack* stack) {
+string peek(Stack* stack) {
     if (stack->top == nullptr) {
         return "";
     }
@@ -50,12 +51,12 @@ bool isEmptyStack(Stack* stack) {
     return stack->top == nullptr;
 }
 
-// ========== ФУНКЦИИ ДЛЯ МНОЖЕСТВА (на основе массива) ==========
+//множество
 SetArray* createSet(int initialCapacity = 10) {
     SetArray* set = new SetArray;
     set->capacity = initialCapacity;
     set->size = 0;
-    set->data = new std::string[set->capacity];
+    set->data = new string[set->capacity];
     return set;
 }
 
@@ -66,7 +67,7 @@ void destroySet(SetArray* set) {
 
 void resizeSet(SetArray* set) {
     int newCapacity = set->capacity * 2;
-    std::string* newData = new std::string[newCapacity];
+    string* newData = new string[newCapacity];
     
     for (int i = 0; i < set->size; i++) {
         newData[i] = set->data[i];
@@ -77,7 +78,7 @@ void resizeSet(SetArray* set) {
     set->capacity = newCapacity;
 }
 
-void setInsert(SetArray* set, const std::string& value) {
+void setInsert(SetArray* set, const string& value) {
     // Проверяем, есть ли уже такой элемент
     for (int i = 0; i < set->size; i++) {
         if (set->data[i] == value) {
@@ -94,7 +95,7 @@ void setInsert(SetArray* set, const std::string& value) {
     set->size++;
 }
 
-bool setContains(SetArray* set, const std::string& value) {
+bool setContains(SetArray* set, const string& value) {
     for (int i = 0; i < set->size; i++) {
         if (set->data[i] == value) {
             return true;
@@ -103,7 +104,7 @@ bool setContains(SetArray* set, const std::string& value) {
     return false;
 }
 
-void setRemove(SetArray* set, const std::string& value) {
+void setRemove(SetArray* set, const string& value) {
     for (int i = 0; i < set->size; i++) {
         if (set->data[i] == value) {
             // Сдвигаем все элементы после i на одну позицию влево
@@ -116,7 +117,7 @@ void setRemove(SetArray* set, const std::string& value) {
     }
 }
 
-// ========== ФУНКЦИИ ДЛЯ СПИСКА (LRU) ==========
+//для списка
 ListNode* createListNode(int key, int value) {
     ListNode* node = new ListNode;
     node->key = key;
@@ -179,7 +180,7 @@ void moveToFront(List* list, ListNode* node) {
     addToFront(list, node);
 }
 
-// ========== ФУНКЦИИ ДЛЯ ХЕШ-ТАБЛИЦЫ ==========
+//хеш
 HashTable* createHashTable(int capacity) {
     HashTable* ht = new HashTable;
     ht->capacity = capacity;
